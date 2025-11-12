@@ -9,6 +9,47 @@ It provides a graphical interface for:
 
 The application is built with PyQt6 and uses a modular design for easy
 extension and modification.
+
+ARCHITECTURE:
+-------------
+The application follows a modular, object-oriented design with three main components:
+
+1. ParameterPanel (QGroupBox)
+   - Contains all input controls (spinboxes for EMF, R, C, and switch button)
+   - Emits 'parameters_changed' signal when any value changes
+   - Easy to extend with new parameters
+
+2. InfoPanel (QGroupBox)
+   - Displays calculated information about the circuit
+   - Currently shows time constant (τ = R × C)
+   - Can be extended to show additional calculations
+
+3. CircuitDiagram (QFrame - see circuit_diagram.py)
+   - Renders the circuit schematic using QPainter
+   - Updates automatically when parameters change
+   - Modular drawing methods for each component
+
+4. MainWindow (QMainWindow)
+   - Coordinates all components
+   - Manages signal/slot connections
+   - Main entry point for the application
+
+EXTENDING THE APPLICATION:
+--------------------------
+To add new features:
+
+- Add new circuit components: Modify CircuitDiagram class in circuit_diagram.py
+- Add new parameters: Add controls to ParameterPanel and update signal handlers
+- Add calculations: Extend InfoPanel with new computed values
+- Add animations: Use QTimer and update circuit parameters over time
+- Add graphs: Use matplotlib or PyQtGraph to show voltage/current vs time
+
+Example of adding a new parameter:
+1. Add a spinbox in ParameterPanel._setup_ui()
+2. Connect its valueChanged signal in _connect_signals()
+3. Update _on_parameter_changed() to include the new value
+4. Pass the value to CircuitDiagram.set_parameters()
+5. Update CircuitDiagram to use the new parameter
 """
 
 import sys

@@ -7,6 +7,46 @@ The circuit includes:
 - Resistor
 - Capacitor
 - Switch (open/closed)
+
+DESIGN:
+-------
+The CircuitDiagram class is a QFrame widget that draws a complete RC circuit
+schematic. It uses QPainter to draw standard electrical symbols and updates
+in real-time when parameters change.
+
+The drawing is organized into modular methods:
+- _draw_wires(): Connects all components with wires
+- _draw_emf(): Draws the voltage source symbol
+- _draw_resistor(): Draws the resistor symbol
+- _draw_capacitor(): Draws the capacitor symbol
+- _draw_switch(): Draws the switch (open or closed)
+- _draw_labels(): Adds parameter labels to components
+
+ADDING NEW COMPONENTS:
+---------------------
+To add a new component to the circuit:
+
+1. Add a new parameter to __init__() and set_parameters()
+2. Create a new _draw_componentname() method following the pattern of existing methods
+3. Call your new drawing method from paintEvent()
+4. Update _draw_wires() if the component needs wire connections
+5. Update _draw_labels() to show the component's value
+
+Example component drawing method structure:
+    def _draw_componentname(self, painter, x, y):
+        '''Draw the component symbol'''
+        pen = QPen(QColor(0, 0, 0), 2)
+        painter.setPen(pen)
+        # Use painter.drawLine(), painter.drawRect(), etc.
+        # Use QPointF for float coordinates or integers for exact pixels
+
+ELECTRICAL SYMBOLS:
+------------------
+- EMF: Two parallel lines (+ and -)
+- Resistor: Rectangular box
+- Capacitor: Two parallel plates
+- Switch: Two connection points with movable arm
+- Wires: Simple lines connecting components
 """
 
 from PyQt6.QtCore import Qt, QRectF, QPointF
