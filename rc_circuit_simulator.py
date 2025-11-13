@@ -88,8 +88,17 @@ class ParameterPanel(QGroupBox):
             parent: Optional parent widget
         """
         super().__init__("Circuit Parameters", parent)
+        
         self._setup_ui()
         self._connect_signals()
+        # Ensure all labels, controls and the groupbox title are rendered in black
+        self.setStyleSheet(
+            self.styleSheet() +
+            "QLabel { color: #000000; }"
+            "QGroupBox::title { color: #000000; }"
+            "QDoubleSpinBox, QSpinBox, QAbstractSpinBox, QPushButton { color: #000000; }"
+        )
+        
         
     def _setup_ui(self):
         """
@@ -275,6 +284,9 @@ class InfoPanel(QGroupBox):
         """
         super().__init__("Circuit Information", parent)
         self._setup_ui()
+        # Make the groupbox title (header) black to match other headers
+        current_ss = self.styleSheet()
+        self.setStyleSheet(current_ss + "QGroupBox::title { color: #000000; }")
         
     def _setup_ui(self):
         """
