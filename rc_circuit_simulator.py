@@ -99,6 +99,15 @@ class ParameterPanel(QGroupBox):
         ranges, and default values.
         """
         layout = QFormLayout()
+
+        # Ensure labels and control text in this panel are black for readability
+        # and make spinbox inputs lightly off-white so black text is clearly visible.
+        # This scope-limited stylesheet applies to this groupbox and its children
+        self.setStyleSheet(
+            "QLabel { color: #000000; }"
+            "QDoubleSpinBox, QSpinBox, QAbstractSpinBox { color: #000000; background-color: #fffaf0; border: 1px solid #cccccc; border-radius: 3px; }"
+            "QPushButton { color: #000000; }"
+        )
         layout.setSpacing(15)
         
         # EMF (Voltage Source) control
@@ -140,7 +149,7 @@ class ParameterPanel(QGroupBox):
                 min-width: 100px;
                 min-height: 30px;
                 background-color: #f44336;
-                color: white;
+                color: #000000;
                 font-weight: bold;
                 border: none;
                 border-radius: 5px;
@@ -272,6 +281,10 @@ class InfoPanel(QGroupBox):
         Set up the user interface elements for the info panel.
         """
         layout = QVBoxLayout()
+
+        # Ensure labels inside this info panel use black text for clarity
+        # Using a groupbox-local stylesheet keeps the change scoped here
+        self.setStyleSheet("QLabel { color: #000000; }")
         
         # Time constant label
         self.time_constant_label = QLabel()

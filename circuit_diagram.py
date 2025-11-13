@@ -137,8 +137,8 @@ class CircuitDiagram(QFrame):
         mid_x = (left_x + right_x) // 2
         
         # Resistor position (moved to right side, top)
-        resistor_x = right_x - 60
-        resistor_y = top_y + 60
+        resistor_x = right_x - 100
+        resistor_y = top_y
         
         # Draw the circuit components
         self._draw_wires(painter, left_x, right_x, top_y, bottom_y, center_y, mid_x, resistor_x, resistor_y)
@@ -188,6 +188,8 @@ class CircuitDiagram(QFrame):
         else:
             # Partial wire when switch is open (stops before EMF)
             painter.drawLine(left_x + 80 - 30, bottom_y, left_x + 40, bottom_y)
+        # Wire from switch to EMF
+        painter.drawLine(left_x + 80 - 30, bottom_y, left_x, bottom_y)
         
         # Left bottom vertical wire (from EMF bottom) - ALWAYS DRAW THIS
         painter.drawLine(left_x, bottom_y, left_x, center_y + 30)
@@ -196,10 +198,10 @@ class CircuitDiagram(QFrame):
         # Top: center to resistor to capacitor
         painter.drawLine(mid_x, top_y, resistor_x - 40, resistor_y)
         painter.drawLine(resistor_x + 40, resistor_y, right_x, resistor_y)
-        painter.drawLine(right_x, resistor_y, right_x, center_y - 30)
+        painter.drawLine(right_x, resistor_y, right_x, center_y - 5)
         
         # Bottom: capacitor to center
-        painter.drawLine(right_x, center_y + 30, right_x, bottom_y)
+        painter.drawLine(right_x, center_y + 5, right_x, bottom_y)
         painter.drawLine(right_x, bottom_y, mid_x, bottom_y)
         
     def _draw_emf(self, painter, x, y):
@@ -385,14 +387,14 @@ class CircuitDiagram(QFrame):
             # Show charging loop indicator (both loops active)
             pen = QPen(QColor(0, 150, 0))
             painter.setPen(pen)
-            painter.drawText(left_x + 20, center_y - 30, "Charging")
-            painter.drawText(left_x + 10, center_y - 15, "(EMF active)")
+            painter.drawText(left_x + 50, center_y - 10, "Charging")
+            painter.drawText(left_x + 40, center_y + 10, "(EMF active)")
         else:
             # Show discharging loop indicator (only right loop active)
             pen = QPen(QColor(200, 0, 0))
             painter.setPen(pen)
-            painter.drawText(mid_x + 10, center_y - 20, "Discharging")
-            painter.drawText(mid_x + 10, center_y - 5, "(R ⟷ C)")
+            painter.drawText(mid_x + 10, center_y - 10, "Discharging")
+            painter.drawText(mid_x + 10, center_y + 10, "(R ⟷ C)")
 
 
 def generate_circuit_image(emf=10.0, resistance=1000.0, capacitance=100.0, 
