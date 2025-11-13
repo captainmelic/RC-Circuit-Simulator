@@ -77,6 +77,7 @@ class CircuitDiagram(QFrame):
         self.resistance_value = 1000.0  # Ohms
         self.capacitance_value = 100.0  # microFarads
         self.switch_closed = False  # Switch state
+        self.charge_level = 0.0  # Capacitor charge level (0-100%)
         
     def set_parameters(self, emf, resistance, capacitance, switch_closed):
         """
@@ -94,9 +95,21 @@ class CircuitDiagram(QFrame):
         self.switch_closed = switch_closed
         self.update()  # Trigger a repaint
         
+    def set_charge_level(self, level):
+        """
+        Update the capacitor charge level for visualization.
+        
+        Args:
+            level: Charge level from 0 to 100
+        """
+        self.charge_level = level
+        self.update()  # Trigger a repaint
+        
     def paintEvent(self, event):
         """
-        Paint the circuit diagram.
+        Paint the circuit diagram showing two loops:
+        - Charging loop (switch closed): EMF → R → C → Switch → EMF
+        - Discharging loop (switch open): R ⟷ C
         
         This method is called automatically when the widget needs to be redrawn.
         
@@ -110,58 +123,83 @@ class CircuitDiagram(QFrame):
         pen = QPen(QColor(0, 0, 0), 2)
         painter.setPen(pen)
         
-        # Define circuit layout positions
+        # Define circuit layout positions for two-loop design
         margin = 50
         width = self.width()
         height = self.height()
         
         # Calculate key positions for circuit components
+        # Left loop (with EMF when switch closed)
         left_x = margin + 50
         right_x = width - margin - 50
         top_y = margin + 50
         bottom_y = height - margin - 50
         center_y = (top_y + bottom_y) // 2
+        mid_x = (left_x + right_x) // 2
         
         # Draw the circuit components
-        self._draw_wires(painter, left_x, right_x, top_y, bottom_y, center_y)
+        self._draw_wires(painter, left_x, right_x, top_y, bottom_y, center_y, mid_x)
         self._draw_emf(painter, left_x, center_y)
-        self._draw_resistor(painter, (left_x + right_x) // 2, top_y)
+        self._draw_resistor(painter, mid_x, top_y)
         self._draw_capacitor(painter, right_x, center_y)
         self._draw_switch(painter, left_x + 80, bottom_y)
         
         # Draw labels
-        self._draw_labels(painter, left_x, right_x, top_y, bottom_y, center_y)
+        self._draw_labels(painter, left_x, right_x, top_y, bottom_y, center_y, mid_x)
         
-    def _draw_wires(self, painter, left_x, right_x, top_y, bottom_y, center_y):
+        # Draw loop indicators to show charging vs discharging paths
+        self._draw_loop_indicators(painter, left_x, right_x, top_y, bottom_y, center_y, mid_x)
+        
+    def _draw_wires(self, painter, left_x, right_x, top_y, bottom_y, center_y, mid_x):
         """
-        Draw the connecting wires of the circuit.
+        Draw the connecting wires showing two distinct loops:
+        - Charging loop (switch closed): EMF → R → C → Switch → EMF
+        - Discharging loop (switch open): R ⟷ C
         
         Args:
             painter: QPainter object
-            left_x, right_x, top_y, bottom_y, center_y: Layout coordinates
+            left_x, right_x, top_y, bottom_y, center_y, mid_x: Layout coordinates
         """
         pen = QPen(QColor(0, 0, 0), 2)
         painter.setPen(pen)
         
+        # Top path: connects resistor and capacitor (active in both loops)
         # Left vertical wire (from EMF top to top junction)
         painter.drawLine(left_x, center_y - 30, left_x, top_y)
         
-        # Top horizontal wire (from left to resistor to capacitor)
-        painter.drawLine(left_x, top_y, right_x, top_y)
+        # Top horizontal wire (left to resistor)
+        painter.drawLine(left_x, top_y, mid_x - 50, top_y)
         
+        # Top horizontal wire (resistor to capacitor)
+        painter.drawLine(mid_x + 50, top_y, right_x, top_y)
+        
+        # Right vertical wire (from capacitor top to capacitor)
+        painter.drawLine(right_x, top_y, right_x, center_y - 30)
+        
+        # Bottom path: charging loop (includes EMF and switch)
         # Right vertical wire (from capacitor to bottom junction)
-        painter.drawLine(right_x, center_y - 30, right_x, bottom_y)
+        painter.drawLine(right_x, center_y + 30, right_x, bottom_y)
         
         # Bottom horizontal wire (from capacitor to switch)
         painter.drawLine(right_x, bottom_y, left_x + 80 + 30, bottom_y)
         
-        # Wire from switch to EMF bottom
+        # Wire from switch to EMF (only connected when switch is closed)
         if self.switch_closed:
+            # Complete charging loop
             painter.drawLine(left_x + 80 - 30, bottom_y, left_x, bottom_y)
+            # Highlight charging path with thicker line
+            pen_charging = QPen(QColor(0, 150, 0), 3)
+            painter.setPen(pen_charging)
+            # Draw charging path indicator (not the actual wires)
         else:
+            # Partial wire when switch is open
             painter.drawLine(left_x + 80 - 30, bottom_y, left_x + 40, bottom_y)
         
-        # Left bottom vertical wire
+        # Reset pen
+        pen = QPen(QColor(0, 0, 0), 2)
+        painter.setPen(pen)
+        
+        # Left bottom vertical wire (from EMF bottom)
         painter.drawLine(left_x, bottom_y, left_x, center_y + 30)
         
     def _draw_emf(self, painter, x, y):
@@ -267,13 +305,13 @@ class CircuitDiagram(QFrame):
             # Open - angled line
             painter.drawLine(x - 26, y, x + 20, y - 15)
         
-    def _draw_labels(self, painter, left_x, right_x, top_y, bottom_y, center_y):
+    def _draw_labels(self, painter, left_x, right_x, top_y, bottom_y, center_y, mid_x):
         """
         Draw labels for all circuit components showing their values.
         
         Args:
             painter: QPainter object
-            left_x, right_x, top_y, bottom_y, center_y: Layout coordinates
+            left_x, right_x, top_y, bottom_y, center_y, mid_x: Layout coordinates
         """
         font = QFont("Arial", 10)
         painter.setFont(font)
@@ -289,15 +327,43 @@ class CircuitDiagram(QFrame):
             r_text = f"R: {self.resistance_value/1000:.1f} kΩ"
         else:
             r_text = f"R: {self.resistance_value:.1f} Ω"
-        painter.drawText((left_x + right_x) // 2 - 30, top_y - 10, r_text)
+        painter.drawText(mid_x - 30, top_y - 10, r_text)
         
-        # Capacitor label
+        # Capacitor label with charge level
         c_text = f"C: {self.capacitance_value:.1f} μF"
-        painter.drawText(right_x + 10, center_y, c_text)
+        painter.drawText(right_x + 10, center_y - 20, c_text)
+        
+        # Charge level indicator on capacitor
+        charge_text = f"{self.charge_level:.1f}%"
+        painter.drawText(right_x + 10, center_y + 10, charge_text)
         
         # Switch label
         switch_text = "Switch: " + ("CLOSED" if self.switch_closed else "OPEN")
         painter.drawText(left_x + 20, bottom_y + 20, switch_text)
+        
+    def _draw_loop_indicators(self, painter, left_x, right_x, top_y, bottom_y, center_y, mid_x):
+        """
+        Draw indicators showing the charging and discharging loops.
+        
+        Args:
+            painter: QPainter object
+            left_x, right_x, top_y, bottom_y, center_y, mid_x: Layout coordinates
+        """
+        font = QFont("Arial", 9, QFont.Weight.Bold)
+        painter.setFont(font)
+        
+        if self.switch_closed:
+            # Show charging loop indicator
+            pen = QPen(QColor(0, 150, 0))
+            painter.setPen(pen)
+            painter.drawText(mid_x - 50, center_y - 20, "Charging Loop")
+            painter.drawText(mid_x - 50, center_y, "(EMF → R → C)")
+        else:
+            # Show discharging loop indicator
+            pen = QPen(QColor(200, 0, 0))
+            painter.setPen(pen)
+            painter.drawText(mid_x - 60, center_y - 20, "Discharging Loop")
+            painter.drawText(mid_x - 60, center_y, "(R ⟷ C)")
 
 
 def generate_circuit_image(emf=10.0, resistance=1000.0, capacitance=100.0, 
