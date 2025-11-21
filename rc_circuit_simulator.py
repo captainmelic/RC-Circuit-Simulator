@@ -121,7 +121,7 @@ class ParameterPanel(QGroupBox):
         
         # EMF (Voltage Source) control
         self.emf_spinbox = QDoubleSpinBox()
-        self.emf_spinbox.setRange(0.0, 100.0)  # 0 to 100 Volts
+        self.emf_spinbox.setRange(0.0, 1000.0)  # 0 to 1000 Volts
         self.emf_spinbox.setValue(10.0)  # Default 10V
         self.emf_spinbox.setSuffix(" V")
         self.emf_spinbox.setDecimals(1)
@@ -131,7 +131,7 @@ class ParameterPanel(QGroupBox):
         
         # Resistance control
         self.resistance_spinbox = QDoubleSpinBox()
-        self.resistance_spinbox.setRange(1.0, 10000.0)  # 1 to 10k Ohms
+        self.resistance_spinbox.setRange(1.0, 100000.0)  # 1 to 100k Ohms
         self.resistance_spinbox.setValue(1000.0)  # Default 1kΩ
         self.resistance_spinbox.setSuffix(" Ω")
         self.resistance_spinbox.setDecimals(1)
@@ -141,7 +141,7 @@ class ParameterPanel(QGroupBox):
         
         # Capacitance control
         self.capacitance_spinbox = QDoubleSpinBox()
-        self.capacitance_spinbox.setRange(1.0, 10000.0)  # 1 to 10000 μF
+        self.capacitance_spinbox.setRange(1.0, 100000.0)  # 1 to 100000 μF
         self.capacitance_spinbox.setValue(100.0)  # Default 100μF
         self.capacitance_spinbox.setSuffix(" μF")
         self.capacitance_spinbox.setDecimals(1)
