@@ -53,12 +53,13 @@ Example of adding a new parameter:
 """
 
 import sys
+import math
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QDoubleSpinBox, QPushButton, QGroupBox, QFormLayout,
-    QSpinBox, QFrame
+    QSpinBox, QFrame, QProgressBar
 )
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QFont
 
 from circuit_diagram import CircuitDiagram
@@ -87,8 +88,17 @@ class ParameterPanel(QGroupBox):
             parent: Optional parent widget
         """
         super().__init__("Circuit Parameters", parent)
+        
         self._setup_ui()
         self._connect_signals()
+        # Ensure all labels, controls and the groupbox title are rendered in black
+        self.setStyleSheet(
+            self.styleSheet() +
+            "QLabel { color: #000000; }"
+            "QGroupBox::title { color: #000000; }"
+            "QDoubleSpinBox, QSpinBox, QAbstractSpinBox, QPushButton { color: #000000; }"
+        )
+        
         
     def _setup_ui(self):
         """
@@ -98,11 +108,20 @@ class ParameterPanel(QGroupBox):
         ranges, and default values.
         """
         layout = QFormLayout()
+
+        # Ensure labels and control text in this panel are black for readability
+        # and make spinbox inputs lightly off-white so black text is clearly visible.
+        # This scope-limited stylesheet applies to this groupbox and its children
+        self.setStyleSheet(
+            "QLabel { color: #000000; }"
+            "QDoubleSpinBox, QSpinBox, QAbstractSpinBox { color: #000000; background-color: #fffaf0; border: 1px solid #cccccc; border-radius: 3px; }"
+            "QPushButton { color: #000000; }"
+        )
         layout.setSpacing(15)
         
         # EMF (Voltage Source) control
         self.emf_spinbox = QDoubleSpinBox()
-        self.emf_spinbox.setRange(0.0, 100.0)  # 0 to 100 Volts
+        self.emf_spinbox.setRange(0.0, 1000.0)  # 0 to 1000 Volts
         self.emf_spinbox.setValue(10.0)  # Default 10V
         self.emf_spinbox.setSuffix(" V")
         self.emf_spinbox.setDecimals(1)
@@ -112,7 +131,7 @@ class ParameterPanel(QGroupBox):
         
         # Resistance control
         self.resistance_spinbox = QDoubleSpinBox()
-        self.resistance_spinbox.setRange(1.0, 10000.0)  # 1 to 10k Ohms
+        self.resistance_spinbox.setRange(1.0, 100000.0)  # 1 to 100k Ohms
         self.resistance_spinbox.setValue(1000.0)  # Default 1kΩ
         self.resistance_spinbox.setSuffix(" Ω")
         self.resistance_spinbox.setDecimals(1)
@@ -122,7 +141,7 @@ class ParameterPanel(QGroupBox):
         
         # Capacitance control
         self.capacitance_spinbox = QDoubleSpinBox()
-        self.capacitance_spinbox.setRange(1.0, 10000.0)  # 1 to 10000 μF
+        self.capacitance_spinbox.setRange(1.0, 100000.0)  # 1 to 100000 μF
         self.capacitance_spinbox.setValue(100.0)  # Default 100μF
         self.capacitance_spinbox.setSuffix(" μF")
         self.capacitance_spinbox.setDecimals(1)
@@ -139,7 +158,7 @@ class ParameterPanel(QGroupBox):
                 min-width: 100px;
                 min-height: 30px;
                 background-color: #f44336;
-                color: white;
+                color: #000000;
                 font-weight: bold;
                 border: none;
                 border-radius: 5px;
@@ -253,6 +272,7 @@ class InfoPanel(QGroupBox):
     
     This panel shows calculated values and information about the
     circuit behavior, such as time constant and charging characteristics.
+    It also includes a progress bar showing the capacitor charge level.
     """
     
     def __init__(self, parent=None):
@@ -264,24 +284,61 @@ class InfoPanel(QGroupBox):
         """
         super().__init__("Circuit Information", parent)
         self._setup_ui()
+        # Make the groupbox title (header) black to match other headers
+        current_ss = self.styleSheet()
+        self.setStyleSheet(current_ss + "QGroupBox::title { color: #000000; }")
         
     def _setup_ui(self):
         """
         Set up the user interface elements for the info panel.
         """
         layout = QVBoxLayout()
+
+        # Ensure labels inside this info panel use black text for clarity
+        # Using a groupbox-local stylesheet keeps the change scoped here
+        self.setStyleSheet("QLabel { color: #000000; }")
         
         # Time constant label
         self.time_constant_label = QLabel()
         self.time_constant_label.setFont(QFont("Arial", 10))
         layout.addWidget(self.time_constant_label)
         
+        # Capacitor charge state label
+        charge_state_label = QLabel("Capacitor Charge Level:")
+        charge_state_label.setFont(QFont("Arial", 10, QFont.Weight.Bold))
+        layout.addWidget(charge_state_label)
+        
+        # Progress bar with percentage
+        progress_layout = QHBoxLayout()
+        self.charge_progress = QProgressBar()
+        self.charge_progress.setRange(0, 100)
+        self.charge_progress.setValue(0)
+        self.charge_progress.setTextVisible(True)
+        self.charge_progress.setFormat("%p%")
+        self.charge_progress.setMinimumHeight(30)
+        self.charge_progress.setStyleSheet("""
+            QProgressBar {
+                border: 2px solid #cccccc;
+                border-radius: 5px;
+                text-align: center;
+                font-weight: bold;
+            }
+            QProgressBar::chunk {
+                background-color: #4CAF50;
+                border-radius: 3px;
+            }
+        """)
+        progress_layout.addWidget(self.charge_progress)
+        layout.addLayout(progress_layout)
+        
         # Information text
         info_text = QLabel(
             "The RC time constant (τ = R × C) determines how quickly\n"
             "the capacitor charges and discharges.\n\n"
             "• At τ: ~63.2% charged\n"
-            "• At 5τ: ~99.3% charged (fully charged)"
+            "• At 5τ: ~99.3% charged (fully charged)\n\n"
+            "When switch is CLOSED: Capacitor charges via EMF\n"
+            "When switch is OPEN: Capacitor discharges through resistor"
         )
         info_text.setFont(QFont("Arial", 9))
         info_text.setWordWrap(True)
@@ -311,6 +368,15 @@ class InfoPanel(QGroupBox):
             tc_text = f"Time Constant (τ): {time_constant*1e6:.3f} μs"
             
         self.time_constant_label.setText(tc_text)
+        
+    def set_charge_level(self, percentage):
+        """
+        Update the capacitor charge level progress bar.
+        
+        Args:
+            percentage: Charge level from 0 to 100
+        """
+        self.charge_progress.setValue(int(percentage))
 
 
 class MainWindow(QMainWindow):
@@ -320,10 +386,10 @@ class MainWindow(QMainWindow):
     This window contains:
     - Circuit diagram display
     - Parameter editing panel
-    - Information panel
+    - Information panel with charge progress bar
     
-    The window coordinates updates between all components to maintain
-    a consistent state.
+    The window coordinates updates between all components and simulates
+    the charging/discharging of the capacitor in real-time.
     """
     
     def __init__(self):
@@ -331,6 +397,13 @@ class MainWindow(QMainWindow):
         Initialize the main application window.
         """
         super().__init__()
+        
+        # Simulation state
+        self.charge_level = 0.0  # Current charge level (0-100%)
+        self.simulation_timer = QTimer()
+        self.simulation_timer.timeout.connect(self._update_simulation)
+        self.last_switch_state = False
+        
         self._setup_ui()
         self._connect_signals()
         
@@ -426,6 +499,72 @@ class MainWindow(QMainWindow):
         
         # Update information panel
         self.info_panel.update_info(resistance, capacitance)
+        
+        # Start/restart simulation when switch state changes
+        if switch_closed != self.last_switch_state:
+            self.last_switch_state = switch_closed
+            self._start_simulation(resistance, capacitance)
+        
+    def _start_simulation(self, resistance, capacitance):
+        """
+        Start the charging/discharging simulation.
+        
+        Args:
+            resistance: Resistance value in Ohms
+            capacitance: Capacitance value in microFarads
+        """
+        # Calculate time constant in seconds
+        self.time_constant = resistance * (capacitance * 1e-6)
+        
+        # Set simulation update interval (50ms for smooth animation)
+        self.simulation_interval = 0.05  # 50ms
+        
+        # Start the timer
+        if not self.simulation_timer.isActive():
+            self.simulation_timer.start(int(self.simulation_interval * 1000))
+        
+    def _update_simulation(self):
+        """
+        Update the capacitor charge/discharge simulation.
+        
+        This method is called periodically by the simulation timer.
+        It calculates the new charge level based on whether the capacitor
+        is charging (switch closed) or discharging (switch open).
+        """
+        _, resistance, capacitance, switch_closed = self.parameter_panel.get_parameters()
+        
+        # Recalculate time constant in case parameters changed
+        time_constant = resistance * (capacitance * 1e-6)
+        
+        if switch_closed:
+            # Charging: Q(t) = Q_max * (1 - e^(-t/τ))
+            # Calculate charge rate based on time constant
+            charge_rate = (100.0 / time_constant) * self.simulation_interval
+            
+            # Update charge level (approach 100%)
+            if self.charge_level < 99.9:
+                # Exponential charging
+                remaining = 100.0 - self.charge_level
+                self.charge_level += remaining * (self.simulation_interval / time_constant)
+            else:
+                self.charge_level = 100.0
+        else:
+            # Discharging: Q(t) = Q_max * e^(-t/τ)
+            # Calculate discharge rate based on time constant
+            discharge_rate = (100.0 / time_constant) * self.simulation_interval
+            
+            # Update charge level (approach 0%)
+            if self.charge_level > 0.1:
+                # Exponential discharging
+                self.charge_level -= self.charge_level * (self.simulation_interval / time_constant)
+            else:
+                self.charge_level = 0.0
+        
+        # Update the progress bar
+        self.info_panel.set_charge_level(self.charge_level)
+        
+        # Update circuit diagram with charge level
+        self.circuit_diagram.set_charge_level(self.charge_level)
 
 
 def main():
